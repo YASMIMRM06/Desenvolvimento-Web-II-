@@ -23,15 +23,22 @@ class AdminController extends Controller
     public function users()
     {
         $users = User::with('roles')->paginate(15);
-        $roles = Role::all();
-        return view('admin.users', compact('users', 'roles'));
-    }
+    $roles = Role::all();
+    return view('admin.users', compact('users', 'roles'));
+}
 
-    public function updateUserRole(UpdateUserRoleRequest $request, User $user)
-    {
-        $user->roles()->sync($request->roles);
-        return back()->with('success', 'User roles updated successfully!');
-    }
+public function updateRoles(Request $request, User $user)
+{
+    $validated = $request->validate([
+        'roles' => 'array',
+        'roles.*' => 'exists:roles,id',
+    ]);
+
+    $user->roles()->sync($validated['roles']);
+
+    return redirect()->route('admin.users')
+        ->with('success', 'User roles updated successfully!');
+}
 
     public function groups()
     {
