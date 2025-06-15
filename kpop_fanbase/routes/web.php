@@ -1,106 +1,137 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\GroupController;
-use App\Http\Controllers\MusicController;
-use App\Http\Controllers\EventController;
-use App\Http\Controllers\TradeController;
-use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\VotingController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\GrupoController;
+use App\Http\Controllers\MusicaController;
+use App\Http\Controllers\EventoController;
+use App\Http\Controllers\PerfilExtendidoController;
+use App\Http\Controllers\ItemColecionavelController;
+use App\Http\Controllers\TrocaController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Rotas Públicas
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
 */
 
-// Rotas Públicas
-Route::get('/', function () {
-    return view('home');
-});
+// Página inicial
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// Rotas de Autenticação
-Route::middleware('guest')->group(function () {
-    Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('login', [AuthController::class, 'login']);
-    Route::get('register', [AuthController::class, 'showRegistrationForm'])->name('register');
-    Route::post('register', [AuthController::class, 'register']);
-    Route::get('forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
-    Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
-    Route::get('reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
-    Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
-});
+// Página sobre
+Route::get('/sobre', [HomeController::class, 'sobre'])->name('sobre');
 
-// Rotas protegidas por autenticação
-Route::middleware('auth')->group(function () {
-    // Logout
-    Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+// Busca
+Route::get('/buscar', [HomeController::class, 'buscar'])->name('buscar');
+
+/*
+|--------------------------------------------------------------------------
+| Rotas de Autenticação
+|--------------------------------------------------------------------------
+*/
+
+Auth::routes(['verify' => true]);
+
+/*
+|--------------------------------------------------------------------------
+| Rotas Protegidas (requerem autenticação)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Verificação de email
-    Route::get('email/verify', [AuthController::class, 'showVerifyEmailNotice'])->name('verification.notice');
-    Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware('signed')->name('verification.verify');
-    Route::post('email/verification-notification', [AuthController::class, 'sendVerificationEmail'])->middleware('throttle:6,1')->name('verification.send');
-
-    // Dashboard
-    Route::get('/home', [HomeController::class, 'index'])->name('home');
-    
-    // Perfil do usuário
+    // Rotas de perfil do usuário
     Route::prefix('profile')->group(function () {
-        Route::get('/', [ProfileController::class, 'index'])->name('profile.index');
-        Route::get('/edit', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::put('/update', [ProfileController::class, 'update'])->name('profile.update');
-        Route::get('/extended', [ProfileController::class, 'extended'])->name('profile.extended');
-        Route::post('/extended', [ProfileController::class, 'storeExtended'])->name('profile.extended.store');
+        Route::get('/', [UserController::class, 'showProfile'])->name('profile.show');
+        Route::get('/edit', [UserController::class, 'editProfile'])->name('profile.edit');
+        Route::put('/update', [UserController::class, 'updateProfile'])->name('profile.update');
     });
-    
-    // Grupos
-    Route::resource('groups', GroupController::class)->except(['show']);
-    Route::get('groups/{group}', [GroupController::class, 'show'])->name('groups.show');
-    
-    // Músicas
-    Route::resource('musics', MusicController::class);
-    Route::post('musics/{music}/rate', [MusicController::class, 'rate'])->name('musics.rate.store');
-    Route::get('musics/{music}/rate', [MusicController::class, 'showRateForm'])->name('musics.rate');
-    
-    // Eventos
-    Route::resource('events', EventController::class);
-    Route::post('events/{event}/participate', [EventController::class, 'participate'])->name('events.participate');
-    Route::delete('events/{event}/participate', [EventController::class, 'cancelParticipation'])->name('events.participate.cancel');
-    
-    // Trocas
-    Route::resource('trades', TradeController::class)->except(['edit', 'update']);
-    Route::get('trades/manage', [TradeController::class, 'manage'])->name('trades.manage');
-    Route::post('trades/{trade}/accept', [TradeController::class, 'accept'])->name('trades.accept');
-    Route::delete('trades/{trade}/reject', [TradeController::class, 'reject'])->name('trades.reject');
-    Route::delete('trades/{trade}/cancel', [TradeController::class, 'cancel'])->name('trades.cancel');
-    
-    // Área Administrativa
-    Route::prefix('admin')->middleware('can:access-admin-panel')->group(function () {
-        Route::get('/', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-        
-        // Gerenciamento de Usuários
-        Route::resource('users', UserController::class)->except(['show']);
-        
-        // Gerenciamento de Permissões
-        Route::get('permissions', [PermissionController::class, 'index'])->name('admin.permissions');
-        Route::post('permissions', [PermissionController::class, 'store'])->name('admin.permissions.store');
-        Route::put('permissions/{permission}', [PermissionController::class, 'update'])->name('admin.permissions.update');
-        Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->name('admin.permissions.destroy');
-        Route::post('roles/{role}/permissions', [PermissionController::class, 'updateRolePermissions'])->name('admin.roles.permissions.update');
-        
-        // Votações
-        Route::resource('votings', VotingController::class);
-        Route::post('votings/{voting}/start', [VotingController::class, 'start'])->name('admin.votings.start');
-        Route::post('votings/{voting}/close', [VotingController::class, 'close'])->name('admin.votings.close');
+
+    // Rotas de perfil extendido
+    Route::prefix('perfil-extendido')->group(function () {
+        Route::get('/edit', [PerfilExtendidoController::class, 'edit'])->name('perfil-extendido.edit');
+        Route::put('/update', [PerfilExtendidoController::class, 'update'])->name('perfil-extendido.update');
     });
+
+    // Rotas de usuários (apenas para administradores)
+    Route::middleware('can:admin')->prefix('users')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('users.index');
+        Route::get('/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/', [UserController::class, 'store'])->name('users.store');
+        Route::get('/{user}', [UserController::class, 'show'])->name('users.show');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::post('/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.update-permissions');
+    });
+
+    // Rotas de grupos
+    Route::prefix('grupos')->group(function () {
+        Route::get('/', [GrupoController::class, 'index'])->name('grupos.index');
+        Route::get('/create', [GrupoController::class, 'create'])->middleware('can:create,App\Models\Grupo')->name('grupos.create');
+        Route::post('/', [GrupoController::class, 'store'])->middleware('can:create,App\Models\Grupo')->name('grupos.store');
+        Route::get('/{grupo}', [GrupoController::class, 'show'])->name('grupos.show');
+        Route::get('/{grupo}/edit', [GrupoController::class, 'edit'])->middleware('can:update,grupo')->name('grupos.edit');
+        Route::put('/{grupo}', [GrupoController::class, 'update'])->middleware('can:update,grupo')->name('grupos.update');
+        Route::delete('/{grupo}', [GrupoController::class, 'destroy'])->middleware('can:delete,grupo')->name('grupos.destroy');
+    });
+
+    // Rotas de músicas
+    Route::prefix('musicas')->group(function () {
+        Route::get('/', [MusicaController::class, 'index'])->name('musicas.index');
+        Route::get('/create', [MusicaController::class, 'create'])->middleware('can:create,App\Models\Musica')->name('musicas.create');
+        Route::post('/', [MusicaController::class, 'store'])->middleware('can:create,App\Models\Musica')->name('musicas.store');
+        Route::get('/{musica}', [MusicaController::class, 'show'])->name('musicas.show');
+        Route::get('/{musica}/edit', [MusicaController::class, 'edit'])->middleware('can:update,musica')->name('musicas.edit');
+        Route::put('/{musica}', [MusicaController::class, 'update'])->middleware('can:update,musica')->name('musicas.update');
+        Route::delete('/{musica}', [MusicaController::class, 'destroy'])->middleware('can:delete,musica')->name('musicas.destroy');
+        Route::post('/{musica}/avaliar', [MusicaController::class, 'avaliar'])->name('musicas.avaliar');
+    });
+
+    // Rotas de eventos
+    Route::prefix('eventos')->group(function () {
+        Route::get('/', [EventoController::class, 'index'])->name('eventos.index');
+        Route::get('/create', [EventoController::class, 'create'])->middleware('can:create,App\Models\Evento')->name('eventos.create');
+        Route::post('/', [EventoController::class, 'store'])->middleware('can:create,App\Models\Evento')->name('eventos.store');
+        Route::get('/{evento}', [EventoController::class, 'show'])->name('eventos.show');
+        Route::get('/{evento}/edit', [EventoController::class, 'edit'])->middleware('can:update,evento')->name('eventos.edit');
+        Route::put('/{evento}', [EventoController::class, 'update'])->middleware('can:update,evento')->name('eventos.update');
+        Route::delete('/{evento}', [EventoController::class, 'destroy'])->middleware('can:delete,evento')->name('eventos.destroy');
+        Route::post('/{evento}/participar', [EventoController::class, 'participar'])->name('eventos.participar');
+        Route::post('/{evento}/cancelar', [EventoController::class, 'cancelarParticipacao'])->name('eventos.cancelar');
+    });
+
+    // Rotas de itens colecionáveis
+    Route::prefix('itens')->group(function () {
+        Route::get('/', [ItemColecionavelController::class, 'index'])->name('itens.index');
+        Route::get('/disponiveis', [ItemColecionavelController::class, 'disponiveisParaTroca'])->name('itens.disponiveis');
+        Route::get('/create', [ItemColecionavelController::class, 'create'])->name('itens.create');
+        Route::post('/', [ItemColecionavelController::class, 'store'])->name('itens.store');
+        Route::get('/{item}', [ItemColecionavelController::class, 'show'])->name('itens.show');
+        Route::get('/{item}/edit', [ItemColecionavelController::class, 'edit'])->middleware('can:update,item')->name('itens.edit');
+        Route::put('/{item}', [ItemColecionavelController::class, 'update'])->middleware('can:update,item')->name('itens.update');
+        Route::delete('/{item}', [ItemColecionavelController::class, 'destroy'])->middleware('can:delete,item')->name('itens.destroy');
+    });
+
+    // Rotas de trocas
+    Route::prefix('trocas')->group(function () {
+        Route::get('/', [TrocaController::class, 'index'])->name('trocas.index');
+        Route::get('/criar/{item}', [TrocaController::class, 'create'])->name('trocas.create');
+        Route::post('/{item}', [TrocaController::class, 'store'])->name('trocas.store');
+        Route::get('/{troca}', [TrocaController::class, 'show'])->name('trocas.show');
+        Route::post('/{troca}/aceitar', [TrocaController::class, 'aceitar'])->name('trocas.aceitar');
+        Route::post('/{troca}/recusar', [TrocaController::class, 'recusar'])->name('trocas.recusar');
+        Route::post('/{troca}/cancelar', [TrocaController::class, 'cancelar'])->name('trocas.cancelar');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rotas de Fallback (404)
+|--------------------------------------------------------------------------
+*/
+
+Route::fallback(function () {
+    return view('errors.404');
 });

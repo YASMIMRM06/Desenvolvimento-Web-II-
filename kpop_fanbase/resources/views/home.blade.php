@@ -1,68 +1,68 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard')
+@section('title', 'Home')
 
 @section('content')
 <div class="row">
-    <div class="col-md-4 mb-4">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">Grupos Favoritos</h5>
-                <p class="card-text">{{ $favoriteGroupsCount ?? 0 }} grupos</p>
-                <a href="{{ route('groups.index') }}" class="text-white">Ver todos</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h5 class="card-title">Próximos Eventos</h5>
-                <p class="card-text">{{ $upcomingEventsCount ?? 0 }} eventos</p>
-                <a href="{{ route('events.index') }}" class="text-white">Ver agenda</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-white bg-info">
-            <div class="card-body">
-                <h5 class="card-title">Itens para Troca</h5>
-                <p class="card-text">{{ $availableTradesCount ?? 0 }} itens</p>
-                <a href="{{ route('trades.index') }}" class="text-white">Explorar</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h4>Recomendações de Músicas</h4>
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3><i class="fas fa-fire"></i> Grupos em Destaque</h3>
             </div>
             <div class="card-body">
                 <div class="row">
-                    @foreach($recommendedMusics as $music)
-                        @include('components.music-card', ['music' => $music])
+                    @foreach($grupos as $grupo)
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <img src="{{ asset('storage/' . $grupo->foto) }}" class="card-img-top" alt="{{ $grupo->nome }}">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ $grupo->nome }}</h5>
+                                <p class="card-text">{{ $grupo->empresa_formatada }}</p>
+                                <a href="{{ route('grupos.show', $grupo->id) }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+                            </div>
+                        </div>
+                    </div>
                     @endforeach
                 </div>
             </div>
         </div>
     </div>
+    
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h4>Suas Conquistas</h4>
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h3><i class="fas fa-music"></i> Novas Músicas</h3>
             </div>
             <div class="card-body">
                 <ul class="list-group">
-                    @forelse($achievements as $achievement)
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ $achievement->name }}
-                            <span class="badge bg-primary rounded-pill">{{ $achievement->progress }}%</span>
-                        </li>
-                    @empty
-                        <li class="list-group-item">Nenhuma conquista ainda</li>
-                    @endforelse
+                    @foreach($musicas as $musica)
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ $musica->titulo }}</strong>
+                            <br>
+                            <small class="text-muted">{{ $musica->grupo->nome }}</small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">{{ $musica->duracao_formatada }}</span>
+                    </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3><i class="fas fa-calendar-alt"></i> Próximos Eventos</h3>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    @foreach($eventos as $evento)
+                    <li class="list-group-item">
+                        <h5>{{ $evento->nome }}</h5>
+                        <p class="mb-1"><i class="fas fa-map-marker-alt"></i> {{ $evento->localizacao }}</p>
+                        <p class="mb-1"><i class="fas fa-clock"></i> {{ $evento->data_evento->format('d/m/Y H:i') }}</p>
+                        <a href="{{ route('eventos.show', $evento->id) }}" class="btn btn-sm btn-info mt-2">Detalhes</a>
+                    </li>
+                    @endforeach
                 </ul>
             </div>
         </div>

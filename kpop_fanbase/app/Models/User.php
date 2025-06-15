@@ -2,47 +2,78 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
+        'nome',
         'email',
-        'password',
+        'senha',
+        'data_nascimento',
+        'tipo',
+        'foto_perfil',
+        'email_verificado'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
+        'senha',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $casts = [
+        'email_verificado_at' => 'datetime',
+        'email_verificado' => 'boolean',
+    ];
+
+    // Relacionamento 1:1 com PerfilExtendido
+    public function perfilExtendido()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasOne(PerfilExtendido::class);
+    }
+
+    // Relacionamento N:N com Evento (participação)
+    public function eventos()
+    {
+        return $this->belongsToMany(Evento::class, 'participacao_eventos')
+                    ->withTimestamps()
+                    ->withPivot('confirmado');
+    }
+
+    // Relacionamento N:N com Permissao (RBAC)
+    public function permissoes()
+    {
+        return $this->belongsToMany(Permissao::class, 'usuario_permissoes');
+    }
+
+    // Relacionamento N:N com Musica através de Avaliacao
+    public function musicasAvaliadas()
+    {
+        return $this->belongsToMany(Musica::class, 'avaliacoes')
+                    ->withPivot('nota', 'comentario', 'data_avaliacao')
+                    ->withTimestamps();
+    }
+
+    // Eventos criados pelo usuário (1:N)
+    public function eventosCriados()
+    {
+        return $this->hasMany(Evento::class, 'criador_id');
+    }
+
+    // Verifica se usuário tem uma permissão específica
+    public function temPermissao($permissao)
+    {
+        return $this->permissoes()->where('nome', $permissao)->exists();
+    }
+
+    // Verifica se usuário é admin
+    public function isAdmin()
+    {
+        return $this->tipo === 'admin' || $this->temPermissao('admin');
     }
 }
